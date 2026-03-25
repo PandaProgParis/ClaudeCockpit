@@ -1,0 +1,18 @@
+services:
+  claude-cockpit:
+    container_name: claude-cockpit
+    image: claude-cockpit:latest
+    build: .
+    environment:
+      - NODE_ENV=production
+      - DOCKER=1
+      - PUBLIC_PORT=6501
+    ports:
+      - "6501:3001"
+    volumes:
+      - "${HOME:-${USERPROFILE}}/.claude:/root/.claude:ro"
+      - claude-cockpit-data:/root/.claude-cockpit
+    restart: unless-stopped
+
+volumes:
+  claude-cockpit-data:

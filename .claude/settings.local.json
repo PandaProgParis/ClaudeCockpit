@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls src/server/*.ts src/renderer/components/*.tsx src/renderer/hooks/*.ts src/renderer/lib/*.ts)",
+      "Bash(ls -la tsconfig*.json vite.config.* .env* .gitignore Dockerfile docker-compose.yml)",
+      "Bash(npm ls:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest:*)"
+    ]
+  }
+}

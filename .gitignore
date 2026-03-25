@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+.vite/
+*.local
+.claude/
+CLAUDE.md
+.superpowers/
+docs/superpowers/
+*.tar
+*.zip
