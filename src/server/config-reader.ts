@@ -6,6 +6,20 @@ import { readCredentials } from './usage-api'
 
 const CLAUDE_DIR = join(homedir(), '.claude')
 
+/**
+ * In Docker, ~/.claude is mounted from the host.
+ * installed_plugins.json contains host-absolute installPaths (e.g. C:\Users\...\\.claude\plugins\cache\...).
+ * We need to remap these to the container-local CLAUDE_DIR.
+ */
+function remapPluginPath(hostPath: string): string {
+  // Match everything after .claude (case-insensitive, forward or back slashes)
+  const match = hostPath.match(/[/\\]\.claude[/\\](.*)/i)
+  if (match) {
+    return join(CLAUDE_DIR, ...match[1].split(/[/\\]/))
+  }
+  return hostPath
+}
+
 // ---------------------------------------------------------------------------
 // Settings merge
 // ---------------------------------------------------------------------------
@@ -133,7 +147,7 @@ async function scanPlugins(): Promise<ClaudeConfig['plugins']> {
     if (!entries?.length) continue
     // Prefer user-scoped entry, fallback to first
     const entry = (entries as any[]).find(e => e.scope === 'user') ?? entries[0]
-    const installPath = entry.installPath
+    const installPath = remapPluginPath(entry.installPath) // remap host paths for Docker bind mounts
 
     // Read metadata: prefer .claude-plugin/plugin.json, fallback to package.json
     const claudePlugin = await readJson(join(installPath, '.claude-plugin', 'plugin.json'))

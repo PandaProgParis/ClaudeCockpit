@@ -3,7 +3,7 @@ out/
 dist/
 .vite/
 *.local
-.claude/
+.claude
 CLAUDE.md
 .superpowers/
 docs/superpowers/
