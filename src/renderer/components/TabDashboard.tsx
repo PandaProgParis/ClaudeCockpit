@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { UsageData, SessionEntry, GlobalStats } from '../lib/types'
 import type { ActiveSessionWithSpeed } from '../hooks/useActiveSessions'
 import { formatTokens, formatCost, formatDuration, formatDate, abbreviateModel, modelColor } from '../lib/format'
@@ -6,6 +7,10 @@ import { useLanguage } from '../hooks/useLanguage'
 import { UsageBar } from './UsageBar'
 import { StatsRow } from './StatsRow'
 import { ActiveSessionCard } from './ActiveSessionCard'
+import { CarbonDashboardWidget } from './CarbonDashboardWidget'
+import { EarthGlobe } from './EarthGlobe'
+import type { CarbonFactors } from '../lib/carbon'
+import { computeTodayCO2 } from '../lib/carbon'
 
 interface Props {
   usage: UsageData | null
@@ -15,6 +20,9 @@ interface Props {
   onSubmitManualUsage: (json: string) => Promise<boolean>
   onGoToHistory: () => void
   onGoToSession: (session: SessionEntry) => void
+  carbonFactors: CarbonFactors
+  carbonQuota: number
+  onNavigateToCarbon: () => void
 }
 
 const sectionTitleStyle: React.CSSProperties = {
@@ -26,13 +34,49 @@ const sectionTitleStyle: React.CSSProperties = {
   letterSpacing: '0.5px',
 }
 
-export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitManualUsage, onGoToHistory, onGoToSession }: Props) {
+export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitManualUsage, onGoToHistory, onGoToSession, carbonFactors, carbonQuota, onNavigateToCarbon }: Props) {
   const exact = useExactNumbers()
   const { t, locale } = useLanguage()
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
+  const [quotaDismissed, setQuotaDismissed] = useState(() => {
+    const stored = localStorage.getItem('carbon-quota-dismissed')
+    if (!stored) return false
+    return stored === new Date().toISOString().slice(0, 10)
+  })
   const recentSessions = sessions.slice(0, 5)
+
+  const todayCO2 = computeTodayCO2(sessions, carbonFactors.emission)
+  const quotaExceeded = carbonQuota > 0 && todayCO2 > carbonQuota && !quotaDismissed
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minHeight: '100%' }}>
+      {quotaExceeded && (
+        <div style={{
+          background: 'linear-gradient(135deg, #4E342E, rgba(183,28,28,0.2))',
+          border: '1px solid rgba(239,83,80,0.4)',
+          borderRadius: 10,
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}>
+          <EarthGlobe percentage={120} size={40} />
+          <div style={{ flex: 1 }}>
+            <div style={{ color: '#ef5350', fontSize: 13, fontWeight: 700 }}>{t.carbonQuotaExceeded}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{todayCO2.toFixed(1)}g / {carbonQuota}g</div>
+            <div style={{ color: 'var(--text-dim)', fontSize: 11 }}>{t.carbonQuotaRecovery}</div>
+          </div>
+          <button
+            onClick={() => {
+              localStorage.setItem('carbon-quota-dismissed', new Date().toISOString().slice(0, 10))
+              setQuotaDismissed(true)
+            }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* Top row: Usage bar + Stats */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
         <div
@@ -50,12 +94,25 @@ export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitM
         <StatsRow sessions={sessions} stats={stats} />
       </div>
 
+      {/* Carbon quota widget */}
+      <CarbonDashboardWidget
+        sessions={sessions}
+        factors={carbonFactors}
+        quotaDaily={carbonQuota}
+        onNavigateToCarbon={onNavigateToCarbon}
+      />
+
       {/* Active sessions */}
       <div>
         <div style={sectionTitleStyle}>{t.activeSessions}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {activeSessions.map((s) => (
-            <ActiveSessionCard key={s.sessionId} session={s} />
+            <ActiveSessionCard
+              key={s.sessionId}
+              session={s}
+              expanded={expandedSessionId === s.sessionId}
+              onToggleExpand={() => setExpandedSessionId(prev => prev === s.sessionId ? null : s.sessionId)}
+            />
           ))}
           {activeSessions.length === 0 && (
             <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>{t.noActiveSessions}</p>

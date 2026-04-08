@@ -384,6 +384,26 @@ app.post('/api/prices', async (req, res) => {
   }
 })
 
+// Carbon factors
+app.get('/api/carbon-factors', async (_req, res) => {
+  try {
+    const { DEFAULT_CARBON_FACTORS } = await import('../renderer/lib/carbon')
+    const factors = await readAppData('carbon-factors.json', DEFAULT_CARBON_FACTORS)
+    res.json(factors)
+  } catch {
+    res.status(500).json({ error: 'Failed to read carbon factors' })
+  }
+})
+
+app.post('/api/carbon-factors', async (req, res) => {
+  try {
+    await writeAppData('carbon-factors.json', req.body)
+    res.json({ ok: true })
+  } catch {
+    res.status(500).json({ error: 'Failed to save carbon factors' })
+  }
+})
+
 // Calibration
 app.get('/api/calibration', async (_req, res) => {
   try {

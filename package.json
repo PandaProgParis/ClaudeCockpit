@@ -34,6 +34,7 @@
     "chokidar": "^5.0.0",
     "express": "^5.0.0",
     "lucide-react": "^0.400.0",
-    "open": "^10.0.0"
+    "open": "^10.0.0",
+    "recharts": "^3.8.1"
   }
 }

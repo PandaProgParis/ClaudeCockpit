@@ -165,6 +165,7 @@ interface ParsedSession {
   primaryModel: string
   usedThinking: boolean
   tokens: { input: number; output: number; cacheCreation: number; cacheRead: number; total: number }
+  lastMessageInputTokens: number
   startedAt: string
   endedAt: string
   durationSeconds: number
@@ -183,6 +184,7 @@ export async function parseSessionFile(filePath: string): Promise<ParsedSession 
   const modelCount = new Map<string, number>()
   let usedThinking = false
   const tokens = { input: 0, output: 0, cacheCreation: 0, cacheRead: 0, total: 0 }
+  let lastMessageInputTokens = 0  // input + cache_read + cache_creation of last message = real context size
   let entrypoint: 'cli' | 'claude-vscode' | 'other' = 'cli'
   const timestamps: number[] = []
   let title = ''
@@ -233,6 +235,9 @@ export async function parseSessionFile(filePath: string): Promise<ParsedSession 
       tokens.output += msg.usage.output_tokens ?? 0
       tokens.cacheCreation += msg.usage.cache_creation_input_tokens ?? 0
       tokens.cacheRead += msg.usage.cache_read_input_tokens ?? 0
+      lastMessageInputTokens = (msg.usage.input_tokens ?? 0)
+        + (msg.usage.cache_read_input_tokens ?? 0)
+        + (msg.usage.cache_creation_input_tokens ?? 0)
     }
   }
 
@@ -260,6 +265,7 @@ export async function parseSessionFile(filePath: string): Promise<ParsedSession 
     primaryModel,
     usedThinking,
     tokens,
+    lastMessageInputTokens,
     startedAt: new Date(startMs).toISOString(),
     endedAt: new Date(endMs).toISOString(),
     durationSeconds,

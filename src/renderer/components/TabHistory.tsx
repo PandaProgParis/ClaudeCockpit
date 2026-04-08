@@ -6,6 +6,10 @@ import { useLanguage } from '../hooks/useLanguage'
 import { ConfirmDialog } from './ConfirmDialog'
 import { useSessionSearch } from '../hooks/useSessionSearch'
 import { SessionViewer } from './SessionViewer'
+import { EcoScoreBadge } from './EcoScoreBadge'
+import { CarbonTooltip } from './CarbonTooltip'
+import { computeCO2, getEcoScore } from '../lib/carbon'
+import type { CarbonFactors } from '../lib/carbon'
 
 interface Props {
   sessions: SessionEntry[]
@@ -19,6 +23,7 @@ interface Props {
   initialProjectFilter?: string
   initialSelectedSession?: SessionEntry | null
   onSessionOpened?: () => void
+  carbonFactors: CarbonFactors
 }
 
 const cardStyle: React.CSSProperties = {
@@ -37,11 +42,12 @@ const sectionTitleStyle: React.CSSProperties = {
   fontWeight: 600,
 }
 
-export function TabHistory({ sessions, stats, onHide, onUnhide, onDelete, showHidden, onToggleHidden, hiddenIds, initialProjectFilter, initialSelectedSession, onSessionOpened }: Props) {
+export function TabHistory({ sessions, stats, onHide, onUnhide, onDelete, showHidden, onToggleHidden, hiddenIds, initialProjectFilter, initialSelectedSession, onSessionOpened, carbonFactors }: Props) {
   const exact = useExactNumbers()
   const { t, locale } = useLanguage()
   const [modelFilter, setModelFilter] = useState('')
   const [projectFilter, setProjectFilter] = useState(initialProjectFilter ?? '')
+  const [hoveredSessionId, setHoveredSessionId] = useState<string | null>(null)
 
   useEffect(() => {
     if (initialProjectFilter) setProjectFilter(initialProjectFilter)
@@ -241,6 +247,8 @@ export function TabHistory({ sessions, stats, onHide, onUnhide, onDelete, showHi
               <div
                 key={s.sessionId}
                 onClick={() => setSelectedSession(s)}
+                onMouseEnter={() => setHoveredSessionId(s.sessionId)}
+                onMouseLeave={() => setHoveredSessionId(null)}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -252,6 +260,7 @@ export function TabHistory({ sessions, stats, onHide, onUnhide, onDelete, showHi
                   transition: 'opacity 0.2s',
                   cursor: 'pointer',
                   background: selectedSession?.sessionId === s.sessionId ? 'var(--bg-card)' : 'transparent',
+                  position: 'relative',
                 }}
               >
                 {/* Line 1: Project + Title */}
@@ -300,6 +309,7 @@ export function TabHistory({ sessions, stats, onHide, onUnhide, onDelete, showHi
                   <span style={{ color: 'var(--accent)', fontSize: 10, fontWeight: 600 }}>
                     {formatCost(s.estimatedCostUSD)}
                   </span>
+                  <EcoScoreBadge score={getEcoScore(computeCO2(s.primaryModel, s.tokens.input, s.tokens.output, carbonFactors.emission))} />
                   <button
                     title={isHidden ? t.show : t.hide}
                     onClick={(e) => { e.stopPropagation(); isHidden ? onUnhide(s.sessionId) : onHide(s.sessionId) }}
@@ -315,6 +325,17 @@ export function TabHistory({ sessions, stats, onHide, onUnhide, onDelete, showHi
                     🗑️
                   </button>
                 </div>
+                {hoveredSessionId === s.sessionId && (
+                  <CarbonTooltip
+                    model={s.primaryModel}
+                    inputTokens={s.tokens.input}
+                    outputTokens={s.tokens.output}
+                    totalTokens={s.tokens.total}
+                    durationSeconds={s.durationSeconds}
+                    factors={carbonFactors}
+                    style={{ position: 'absolute', right: 0, top: '100%', zIndex: 100 }}
+                  />
+                )}
               </div>
             )
           })}
@@ -373,6 +394,7 @@ export function TabHistory({ sessions, stats, onHide, onUnhide, onDelete, showHi
           <SessionViewer
             session={selectedSession}
             onClose={() => setSelectedSession(null)}
+            carbonFactors={carbonFactors}
           />
         </div>
       )}

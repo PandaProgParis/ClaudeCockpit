@@ -49,8 +49,8 @@ export async function getActiveSessions(): Promise<ActiveSession[]> {
     const segments = rawDirName.split('-').filter(Boolean)
     const projectDirName = segments[segments.length - 1] || rawDirName
 
-    // contextSize = last assistant message's input_tokens (approximation: use total input tokens)
-    const contextSize = parsed.tokens.input
+    // contextSize = input_tokens of the last assistant message (= what Claude currently "sees")
+    const contextSize = parsed.lastMessageInputTokens
     const maxContextSize = getContextLimit(parsed.primaryModel)
 
     results.push({

@@ -16,14 +16,19 @@ import { setPriceTable } from '../lib/cost'
 import { ExactNumbersContext } from '../hooks/useExactNumbers'
 import type { SSEEvent, SessionEntry } from '../lib/types'
 import type { Translations } from '../lib/i18n'
+import { TabCarbon } from './TabCarbon'
+import { CarbonDashboardWidget } from './CarbonDashboardWidget'
+import type { CarbonFactors } from '../lib/carbon'
+import { DEFAULT_CARBON_FACTORS } from '../lib/carbon'
 
-type Tab = 'dashboard' | 'history' | 'projects' | 'mcp' | 'skills' | 'permissions'
+type Tab = 'dashboard' | 'history' | 'projects' | 'mcp' | 'skills' | 'permissions' | 'carbon'
 
 function getTabs(t: Translations): { id: Tab; label: string }[] {
   return [
     { id: 'dashboard', label: t.tabDashboard },
     { id: 'history', label: t.tabHistory },
     { id: 'projects', label: t.tabProjects },
+    { id: 'carbon', label: t.tabCarbon },
     { id: 'mcp', label: 'MCP' },
     { id: 'skills', label: 'Skills & Plugins' },
     { id: 'permissions', label: 'Permissions' },
@@ -97,13 +102,17 @@ export function App() {
   const [refreshIntervalMs, setRefreshIntervalMs] = useState(5000)
   const [autoRefreshing, setAutoRefreshing] = useState(false)
   const [exactNumbers, setExactNumbers] = useState(false)
+  const [carbonFactors, setCarbonFactors] = useState<CarbonFactors>(DEFAULT_CARBON_FACTORS)
+  const [carbonQuota, setCarbonQuota] = useState(50)
 
   // Load app settings on mount
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(s => {
       if (s.refreshIntervalMs) setRefreshIntervalMs(s.refreshIntervalMs)
       if (s.exactNumbers !== undefined) setExactNumbers(s.exactNumbers)
+      if (s.carbonQuotaDaily !== undefined) setCarbonQuota(s.carbonQuotaDaily)
     }).catch(() => {})
+    fetch('/api/carbon-factors').then(r => r.json()).then(setCarbonFactors).catch(() => {})
   }, [])
 
   // Auto-refresh active sessions at configurable interval
@@ -188,7 +197,7 @@ export function App() {
             </button>
             <TabSettings
               onPricesChanged={history.refresh}
-              onSettingsChanged={(s) => { setRefreshIntervalMs(s.refreshIntervalMs); setExactNumbers(s.exactNumbers) }}
+              onSettingsChanged={(s) => { setRefreshIntervalMs(s.refreshIntervalMs); setExactNumbers(s.exactNumbers); if (s.carbonQuotaDaily !== undefined) setCarbonQuota(s.carbonQuotaDaily) }}
               onClose={() => setShowSettings(false)}
               exactNumbers={exactNumbers}
             />
@@ -220,6 +229,9 @@ export function App() {
             onSubmitManualUsage={usage.submitManualUsage}
             onGoToHistory={() => setTab('history')}
             onGoToSession={handleGoToSession}
+            carbonFactors={carbonFactors}
+            carbonQuota={carbonQuota}
+            onNavigateToCarbon={() => setTab('carbon')}
           />
         )}
         {tab === 'mcp' && config.config && (
@@ -244,6 +256,14 @@ export function App() {
             initialProjectFilter={selectedProject}
             initialSelectedSession={initialSelectedSession}
             onSessionOpened={() => setInitialSelectedSession(null)}
+            carbonFactors={carbonFactors}
+          />
+        )}
+        {tab === 'carbon' && (
+          <TabCarbon
+            sessions={history.sessions}
+            factors={carbonFactors}
+            quotaDaily={carbonQuota}
           />
         )}
         {tab === 'projects' && (

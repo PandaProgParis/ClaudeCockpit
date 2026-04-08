@@ -1,0 +1,42 @@
+/* src/renderer/components/carbon-story/animations.css */
+
+@keyframes gardenerPlanting {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
+@keyframes gardenerWatering {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-10deg); }
+}
+
+@keyframes gardenerSweating {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes gardenerPanicking {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-20px); }
+  50% { transform: translateX(0); }
+  75% { transform: translateX(20px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes gardenerBurning {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(2px) rotate(-3deg); }
+  60% { transform: translateY(1px) rotate(3deg); }
+}
+
+@keyframes gardenerDead {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(90deg) translateX(10px); }
+}
+
+@keyframes sweatDrop {
+  0% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(10px); }
+}

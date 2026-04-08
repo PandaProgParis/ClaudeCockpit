@@ -3,12 +3,15 @@ import type { SessionEntry, ToolUseBlock, ThinkingBlock, TextBlock } from '../li
 import { useSessionMessages } from '../hooks/useSessionMessages'
 import { useLanguage } from '../hooks/useLanguage'
 import { formatDate, formatDuration } from '../lib/format'
+import { computeCO2, computeEquivalences, getEcoScore } from '../lib/carbon'
+import type { CarbonFactors } from '../lib/carbon'
 
 const DETAILS_KEY = 'cockpit:viewer:details'
 
 interface Props {
   session: SessionEntry
   onClose: () => void
+  carbonFactors: CarbonFactors
 }
 
 function SkeletonBubble({ right }: { right?: boolean }) {
@@ -56,8 +59,12 @@ function ToolCallLine({ block, expanded }: { block: ToolUseBlock; expanded: bool
   )
 }
 
-export function SessionViewer({ session, onClose }: Props) {
+export function SessionViewer({ session, onClose, carbonFactors }: Props) {
   const { t } = useLanguage()
+
+  const co2 = computeCO2(session.primaryModel, session.tokens.input, session.tokens.output, carbonFactors.emission)
+  const eq = computeEquivalences(co2, session.tokens.total, carbonFactors.equivalences)
+  const score = getEcoScore(co2)
 
   const [showDetails, setShowDetails] = useState(() => {
     try { return localStorage.getItem(DETAILS_KEY) !== 'false' } catch { return true }
@@ -100,6 +107,15 @@ export function SessionViewer({ session, onClose }: Props) {
           </div>
           <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
             {formatDate(session.startedAt)} · {formatDuration(session.durationSeconds)} · {session.primaryModel}
+          </div>
+          {/* Carbon footprint */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+            <span style={{ color: score.color, fontWeight: 600 }}>
+              {co2 < 1 ? co2.toFixed(2) : co2.toFixed(1)}g CO₂ ({score.letter})
+            </span>
+            <span>🚗 {(eq.carKm).toFixed(3)} km</span>
+            <span>💧 {eq.waterMl >= 1000 ? `${(eq.waterMl/1000).toFixed(1)} L` : `${eq.waterMl.toFixed(0)} mL`}</span>
+            <span>📱 {eq.phoneCharges.toFixed(1)}</span>
           </div>
         </div>
 
