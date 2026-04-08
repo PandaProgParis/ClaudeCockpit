@@ -37,6 +37,8 @@ interface Props {
   sessions: SessionEntry[]
   factors: CarbonFactors
   quotaDaily: number
+  showOnDashboard: boolean
+  onToggleShowOnDashboard: (value: boolean) => void
 }
 
 const cardStyle: React.CSSProperties = {
@@ -92,12 +94,23 @@ function formatFlightTime(min: number): string {
   return `${formatEquivValue(min * 60)} sec`
 }
 
-export function TabCarbon({ sessions, factors, quotaDaily }: Props) {
+export function TabCarbon({ sessions, factors, quotaDaily, showOnDashboard, onToggleShowOnDashboard }: Props) {
   const { t } = useLanguage()
   const exact = useExactNumbers()
   const [period, setPeriod] = useState<Period>('week')
 
   const filteredSessions = useMemo(() => filterByPeriod(sessions, period), [sessions, period])
+
+  // CO2 per period for gauges
+  const periodCO2 = useMemo(() => {
+    const calc = (p: Period) => {
+      const filtered = filterByPeriod(sessions, p)
+      let co2 = 0
+      for (const s of filtered) co2 += computeCO2(s.primaryModel, s.tokens.input, s.tokens.output, factors.emission)
+      return co2
+    }
+    return { today: calc('today'), week: calc('week'), year: calc('year'), all: calc('all') }
+  }, [sessions, factors])
 
   const totals = useMemo(() => {
     let totalCO2 = 0
@@ -187,69 +200,45 @@ export function TabCarbon({ sessions, factors, quotaDaily }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Period selector */}
-      <div style={{ display: 'flex', gap: 6 }}>
-        {periods.map(p => (
-          <button
-            key={p.id}
-            onClick={() => setPeriod(p.id)}
-            style={{
-              padding: '5px 14px',
-              borderRadius: 20,
-              border: period === p.id ? 'none' : '1px solid var(--border)',
-              background: period === p.id ? 'var(--accent)' : 'var(--bg-card)',
-              color: period === p.id ? '#fff' : 'var(--text-muted)',
-              fontSize: 12,
-              fontWeight: period === p.id ? 600 : 400,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
-            }}
-          >
-            {p.label}
-          </button>
-        ))}
+      {/* Header: total CO2 + dashboard toggle */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{formatCO2(periodCO2.all)}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>CO₂ {t.carbonPeriodAll.toLowerCase()}</span>
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, color: 'var(--text-muted)' }}>
+          <input
+            type="checkbox"
+            checked={showOnDashboard}
+            onChange={(e) => onToggleShowOnDashboard(e.target.checked)}
+            style={{ accentColor: 'var(--accent)', cursor: 'pointer' }}
+          />
+          {t.carbonShowOnDashboard}
+        </label>
       </div>
 
-      {/* Row 1: KPIs */}
-      <div style={{ display: 'flex', gap: 12 }}>
-        <div style={kpiStyle}>
-          <div style={labelStyle}>{t.carbonTotalCO2}</div>
-          <div style={bigValueStyle}>{formatCO2(totals.totalCO2)}</div>
-          <div style={{ color: totals.score.color, fontSize: 12 }}>{totals.score.letter} — {totals.score.level <= 2 ? t.carbonLowImpact : ''}</div>
-        </div>
-        <div style={kpiStyle}>
-          <div style={labelStyle}>{t.carbonEquivalent}</div>
-          <div style={bigValueStyle}>{formatEquivValue(totals.eq.carKm)} km</div>
-          <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>🚗 {t.carbonCarLabel}</div>
-        </div>
-        <div style={kpiStyle}>
-          <div style={labelStyle}>{t.carbonMostEcoModel}</div>
-          <div style={{ ...bigValueStyle, fontSize: 20 }}>{totals.mostEco}</div>
-          <div style={{ color: '#66BB6A', fontSize: 12 }}>
-            {totals.mostEco !== '-' ? `${t.carbonLowImpact} 🌱` : ''}
-          </div>
-        </div>
-        <div style={kpiStyle}>
-          <div style={labelStyle}>{t.carbonWaterEstimate}</div>
-          <div style={bigValueStyle}>{formatWater(totals.eq.waterMl)}</div>
-          <div style={{ color: '#64B5F6', fontSize: 12 }}>💧 {t.carbonWaterLabel}</div>
-        </div>
-      </div>
-
-      {/* Row 2: Equivalences */}
+      {/* CO2 Gauges */}
       <div style={cardStyle}>
-        <div style={{ ...labelStyle, marginBottom: 12 }}>{t.carbonEquivalences}</div>
-        <div style={{ display: 'flex', gap: 20, justifyContent: 'space-around' }}>
-          <EquivCard emoji="🚗" value={`${formatEquivValue(totals.eq.carKm)} km`} label={t.carbonCarLabel} />
-          <EquivCard emoji="✈️" value={formatFlightTime(totals.eq.flightMin)} label={t.carbonFlightLabel} />
-          <EquivCard emoji="💧" value={formatWater(totals.eq.waterMl)} label={t.carbonWaterLabel} />
-          <EquivCard emoji="📱" value={formatEquivValue(totals.eq.phoneCharges)} label={t.carbonPhoneLabel} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <GaugeRow label={t.carbonPeriodToday} value={periodCO2.today} max={periodCO2.all} color="#66BB6A" onClick={() => setPeriod('today')} active={period === 'today'} />
+          <GaugeRow label={t.carbonPeriodWeek} value={periodCO2.week} max={periodCO2.all} color="#42A5F5" onClick={() => setPeriod('week')} active={period === 'week'} />
+          <GaugeRow label={t.carbonPeriodYear} value={periodCO2.year} max={periodCO2.all} color="#FFA726" onClick={() => setPeriod('year')} active={period === 'year'} />
+          <GaugeRow label={t.carbonPeriodAll} value={periodCO2.all} max={periodCO2.all} color="var(--accent)" onClick={() => setPeriod('all')} active={period === 'all'} />
         </div>
       </div>
 
-      {/* Row 3: Storytelling */}
-      <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
-        <CarbonStoryScene percentage={quotaDaily > 0 ? (computeTodayCO2(sessions, factors.emission) / quotaDaily) * 100 : 0} />
+      {/* Row 2: Story (80%) + Equivalences (20%) */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', height: 200 }}>
+        <div style={{ ...cardStyle, flex: 8, padding: 0, overflow: 'hidden', height: 200 }}>
+          <CarbonStoryScene percentage={quotaDaily > 0 ? (computeTodayCO2(sessions, factors.emission) / quotaDaily) * 100 : 0} />
+        </div>
+        <div style={{ ...cardStyle, flex: 2, display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', minWidth: 100, height: 200, overflow: 'hidden', padding: '8px 12px' }}>
+          <div style={{ ...labelStyle, textAlign: 'center', fontSize: 9, marginBottom: 2 }}>{t.carbonEquivalences}</div>
+          <MiniEquiv emoji="🚗" value={`${formatEquivValue(totals.eq.carKm)} km`} />
+          <MiniEquiv emoji="✈️" value={formatFlightTime(totals.eq.flightMin)} />
+          <MiniEquiv emoji="💧" value={formatWater(totals.eq.waterMl)} />
+          <MiniEquiv emoji="📱" value={`${formatEquivValue(totals.eq.phoneCharges)}x`} />
+        </div>
       </div>
 
       {/* Row 4: Charts */}
@@ -309,6 +298,52 @@ export function TabCarbon({ sessions, factors, quotaDaily }: Props) {
         <span style={{ fontSize: 14 }}>⚠️</span>
         <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{t.carbonDisclaimer}</span>
       </div>
+    </div>
+  )
+}
+
+function GaugeRow({ label, value, max, color, onClick, active }: { label: string; value: number; max: number; color: string; onClick: () => void; active: boolean }) {
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        cursor: 'pointer',
+        opacity: active ? 1 : 0.7,
+        transition: 'opacity 0.15s',
+      }}
+    >
+      <div style={{ width: 80, fontSize: 11, fontWeight: active ? 600 : 400, color: active ? 'var(--text)' : 'var(--text-muted)', flexShrink: 0 }}>
+        {label}
+      </div>
+      <div style={{ flex: 1, height: 8, background: 'var(--border)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+        <div style={{
+          height: '100%',
+          width: `${pct}%`,
+          background: color,
+          borderRadius: 4,
+          transition: 'width 0.3s ease',
+          minWidth: pct > 0 ? 4 : 0,
+        }} />
+      </div>
+      <div style={{ width: 60, fontSize: 11, fontWeight: 600, color: 'var(--text)', textAlign: 'right', flexShrink: 0 }}>
+        {formatCO2(value)}
+      </div>
+      <div style={{ width: 36, fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', flexShrink: 0 }}>
+        {Math.round(pct)}%
+      </div>
+    </div>
+  )
+}
+
+function MiniEquiv({ emoji, value }: { emoji: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 14 }}>{emoji}</span>
+      <span style={{ color: 'var(--text)', fontSize: 12, fontWeight: 600 }}>{value}</span>
     </div>
   )
 }

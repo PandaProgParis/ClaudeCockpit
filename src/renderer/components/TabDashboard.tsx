@@ -23,6 +23,7 @@ interface Props {
   carbonFactors: CarbonFactors
   carbonQuota: number
   onNavigateToCarbon: () => void
+  showCarbonWidget: boolean
 }
 
 const sectionTitleStyle: React.CSSProperties = {
@@ -34,7 +35,7 @@ const sectionTitleStyle: React.CSSProperties = {
   letterSpacing: '0.5px',
 }
 
-export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitManualUsage, onGoToHistory, onGoToSession, carbonFactors, carbonQuota, onNavigateToCarbon }: Props) {
+export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitManualUsage, onGoToHistory, onGoToSession, carbonFactors, carbonQuota, onNavigateToCarbon, showCarbonWidget }: Props) {
   const exact = useExactNumbers()
   const { t, locale } = useLanguage()
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
@@ -95,12 +96,14 @@ export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitM
       </div>
 
       {/* Carbon quota widget */}
-      <CarbonDashboardWidget
-        sessions={sessions}
-        factors={carbonFactors}
-        quotaDaily={carbonQuota}
-        onNavigateToCarbon={onNavigateToCarbon}
-      />
+      {showCarbonWidget && (
+        <CarbonDashboardWidget
+          sessions={sessions}
+          factors={carbonFactors}
+          quotaDaily={carbonQuota}
+          onNavigateToCarbon={onNavigateToCarbon}
+        />
+      )}
 
       {/* Active sessions */}
       <div>

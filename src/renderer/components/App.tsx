@@ -104,6 +104,7 @@ export function App() {
   const [exactNumbers, setExactNumbers] = useState(false)
   const [carbonFactors, setCarbonFactors] = useState<CarbonFactors>(DEFAULT_CARBON_FACTORS)
   const [carbonQuota, setCarbonQuota] = useState(50)
+  const [showCarbonOnDashboard, setShowCarbonOnDashboard] = useState(true)
 
   // Load app settings on mount
   useEffect(() => {
@@ -111,6 +112,7 @@ export function App() {
       if (s.refreshIntervalMs) setRefreshIntervalMs(s.refreshIntervalMs)
       if (s.exactNumbers !== undefined) setExactNumbers(s.exactNumbers)
       if (s.carbonQuotaDaily !== undefined) setCarbonQuota(s.carbonQuotaDaily)
+      if (s.showCarbonOnDashboard !== undefined) setShowCarbonOnDashboard(s.showCarbonOnDashboard)
     }).catch(() => {})
     fetch('/api/carbon-factors').then(r => r.json()).then(setCarbonFactors).catch(() => {})
   }, [])
@@ -232,6 +234,7 @@ export function App() {
             carbonFactors={carbonFactors}
             carbonQuota={carbonQuota}
             onNavigateToCarbon={() => setTab('carbon')}
+            showCarbonWidget={showCarbonOnDashboard}
           />
         )}
         {tab === 'mcp' && config.config && (
@@ -264,6 +267,13 @@ export function App() {
             sessions={history.sessions}
             factors={carbonFactors}
             quotaDaily={carbonQuota}
+            showOnDashboard={showCarbonOnDashboard}
+            onToggleShowOnDashboard={(v) => {
+              setShowCarbonOnDashboard(v)
+              fetch('/api/settings').then(r => r.json()).then(s => {
+                fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...s, showCarbonOnDashboard: v }) })
+              })
+            }}
           />
         )}
         {tab === 'projects' && (

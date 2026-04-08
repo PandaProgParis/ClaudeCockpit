@@ -223,6 +223,7 @@ export interface Translations {
   carbonPeriodWeek: string
   carbonPeriodYear: string
   carbonPeriodAll: string
+  carbonShowOnDashboard: string
 }
 
 export const en: Translations = {
@@ -431,6 +432,7 @@ export const en: Translations = {
   carbonPeriodWeek: 'This week',
   carbonPeriodYear: 'This year',
   carbonPeriodAll: 'All time',
+  carbonShowOnDashboard: 'Show on dashboard',
 }
 
 export const fr: Translations = {
@@ -639,6 +641,7 @@ export const fr: Translations = {
   carbonPeriodWeek: 'Cette semaine',
   carbonPeriodYear: 'Cette année',
   carbonPeriodAll: 'Tout',
+  carbonShowOnDashboard: 'Afficher sur le dashboard',
 }
 
 const translations: Record<Locale, Translations> = { en, fr }
