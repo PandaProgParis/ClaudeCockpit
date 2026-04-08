@@ -209,12 +209,17 @@ function LiveMessagesPanel({ sessionId, projectPath }: { sessionId: string; proj
       style={{
         maxHeight: 350,
         overflowY: 'auto',
-        borderTop: '1px solid var(--border)',
-        paddingTop: 8,
+        marginTop: 8,
+        marginLeft: 14,
+        padding: '10px 12px',
         display: 'flex',
         flexDirection: 'column',
         gap: 6,
         userSelect: 'text',
+        background: 'var(--bg)',
+        borderRadius: 8,
+        border: '1px solid var(--border)',
+        boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)',
       }}
     >
       {loading && (

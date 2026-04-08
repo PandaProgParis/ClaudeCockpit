@@ -250,7 +250,9 @@ app.get('/api/sessions/:id/messages', async (req, res) => {
     if (projectPath) {
       const encoded = resolveProjectDirName(projectPath)
       const candidate = resolve(join(projectsBase, encoded, `${id}.jsonl`))
-      if (candidate.startsWith(projectsBase)) sessionFilePath = candidate
+      if (candidate.startsWith(projectsBase)) {
+        try { await stat(candidate); sessionFilePath = candidate } catch { /* file doesn't exist, try fallback */ }
+      }
     }
 
     if (!sessionFilePath) {
