@@ -12,7 +12,8 @@ import { getActiveSessions, startWatcher } from './session-watcher'
 import { getHiddenSessions, hideSession, unhideSession, deleteSession } from './session-manager'
 import { readAppData, writeAppData } from './app-data'
 import { getCalibrationData } from './calibration'
-import { buildIndex, updateIndexForSession, searchIndex } from './session-index'
+import { buildIndex, updateIndexForSession, searchIndex, rebuildIndex } from './session-index'
+import { parseCoworkData, invalidateCoworkCache } from './cowork-parser'
 import type { SearchScope, SessionMessage, AssistantContentBlock } from '../renderer/lib/types'
 import type { SessionEntry } from '../renderer/lib/types'
 import type { UsageData } from '../renderer/lib/types'
@@ -415,6 +416,36 @@ app.get('/api/calibration', async (_req, res) => {
   }
 })
 
+// Cowork
+app.get('/api/cowork', async (_req, res) => {
+  try {
+    const data = await parseCoworkData()
+    res.json(data)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to parse Cowork data' })
+  }
+})
+
+app.get('/api/cowork/refresh', async (_req, res) => {
+  try {
+    invalidateCoworkCache()
+    const data = await parseCoworkData()
+    res.json(data)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to refresh Cowork data' })
+  }
+})
+
+app.post('/api/session-index/rebuild', async (_req, res) => {
+  try {
+    const index = await rebuildIndex()
+    const count = Object.keys(index.sessions).length
+    res.json({ success: true, sessionCount: count, builtAt: index.builtAt })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to rebuild session index' })
+  }
+})
+
 if (IS_PROD) {
   const clientPath = join(__dirname, '../../dist/client')
   app.use(express.static(clientPath))
@@ -427,6 +458,14 @@ app.listen(PORT, async () => {
   const url = `http://localhost:${PORT}`
   console.log(`Claude History Viewer → ${url}`)
 
+  // Build session index FIRST (must complete before parsing sessions)
+  try {
+    const idx = await rebuildIndex()
+    console.log(`Session index built: ${Object.keys(idx.sessions).length} sessions`)
+  } catch (err) {
+    console.error('Failed to build session index:', err)
+  }
+
   // Start session watcher with SSE broadcasting
   console.log('Starting session watcher...')
   startWatcher((event) => {
@@ -437,7 +476,7 @@ app.listen(PORT, async () => {
     }
   })
 
-  // Build search index after initial session parse
+  // Build search index after initial session parse (index is ready now)
   getSessions().then(sessions => buildIndex(sessions)).catch(() => {})
 
   // Start usage polling (every 5 minutes)

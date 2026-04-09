@@ -20,14 +20,17 @@ import { TabCarbon } from './TabCarbon'
 import { CarbonDashboardWidget } from './CarbonDashboardWidget'
 import type { CarbonFactors } from '../lib/carbon'
 import { DEFAULT_CARBON_FACTORS } from '../lib/carbon'
+import { TabCowork } from './TabCowork'
+import { useCowork } from '../hooks/useCowork'
 
-type Tab = 'dashboard' | 'history' | 'projects' | 'mcp' | 'skills' | 'permissions' | 'carbon'
+type Tab = 'dashboard' | 'history' | 'projects' | 'mcp' | 'skills' | 'permissions' | 'carbon' | 'cowork'
 
 function getTabs(t: Translations): { id: Tab; label: string }[] {
   return [
     { id: 'dashboard', label: t.tabDashboard },
-    { id: 'history', label: t.tabHistory },
     { id: 'projects', label: t.tabProjects },
+    { id: 'history', label: t.tabHistory },
+    { id: 'cowork', label: t.tabCowork },
     { id: 'carbon', label: t.tabCarbon },
     { id: 'mcp', label: 'MCP' },
     { id: 'skills', label: 'Skills & Plugins' },
@@ -44,6 +47,7 @@ export function App() {
   const usage = useUsage()
   const activeSessions = useActiveSessions()
   const config = useConfig()
+  const cowork = useCowork()
 
   // Load custom prices on mount
   useEffect(() => {
@@ -235,6 +239,8 @@ export function App() {
             carbonQuota={carbonQuota}
             onNavigateToCarbon={() => setTab('carbon')}
             showCarbonWidget={showCarbonOnDashboard}
+            coworkSessionCount={cowork.data.sessions.length}
+            coworkCostUSD={cowork.data.sessions.reduce((s, sess) => s + sess.estimatedCostUSD, 0)}
           />
         )}
         {tab === 'mcp' && config.config && (
@@ -286,6 +292,16 @@ export function App() {
             onHideSession={handleHide}
             onUnhideSession={handleUnhide}
             onDeleteSession={handleDelete}
+          />
+        )}
+        {tab === 'cowork' && (
+          <TabCowork
+            data={cowork.data}
+            loading={cowork.loading}
+            refreshing={cowork.refreshing}
+            onRefresh={cowork.refresh}
+            t={t}
+            exactNumbers={exactNumbers}
           />
         )}
       </div>

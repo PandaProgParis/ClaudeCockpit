@@ -124,3 +124,70 @@ export interface SearchResult {
     after:  string
   }
 }
+
+// --- Cowork types ---
+
+export interface CoworkSpace {
+  id: string
+  name: string
+  folders: string[]
+  instructions: string
+  createdAt: string
+  updatedAt: string
+  sessionCount: number
+  totalCostUSD: number
+  folderSizeBytes: number | null
+}
+
+export interface CoworkPlugin {
+  id: string
+  name: string
+  marketplaceName: string
+  installedBy: string
+}
+
+export interface CoworkSession {
+  sessionId: string
+  title: string
+  model: string
+  initialMessage: string
+  createdAt: string
+  lastActivityAt: string
+  durationSeconds: number
+  isArchived: boolean
+  processName: string
+  sdkVersion: string
+  enabledMcpTools: string[]
+  slashCommands: string[]
+  hostLoopMode: boolean
+  estimatedCostUSD: number
+  tokens: {
+    input: number
+    output: number
+    cacheCreation: number
+    cacheRead: number
+    total: number
+  }
+}
+
+export interface CoworkData {
+  spaces: CoworkSpace[]
+  sessions: CoworkSession[]
+  plugins: CoworkPlugin[]
+}
+
+// --- Session index types ---
+
+export interface SessionIndexEntry {
+  projectPath: string | null
+  projectName: string
+  source: 'cli' | 'cowork'
+  title: string
+  timestamp: number
+}
+
+export interface SessionIndex {
+  version: number
+  builtAt: string
+  sessions: Record<string, SessionIndexEntry>
+}

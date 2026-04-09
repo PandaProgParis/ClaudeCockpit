@@ -6,6 +6,7 @@ import { join, basename } from 'path'
 import { parseSessionFile } from './history-parser'
 import { estimateCost } from '../renderer/lib/cost'
 import { getContextLimit } from '../renderer/lib/cost'
+import { addToIndex } from './session-index'
 import type { ActiveSession } from '../renderer/lib/types'
 
 const PROJECTS_DIR = join(homedir(), '.claude', 'projects')
@@ -98,6 +99,14 @@ export function startWatcher(onEvent: (event: WatcherEvent) => void): void {
       if (status !== 'ended') {
         trackedSessions.set(sessionId, { filePath, lastMtimeMs: stats.mtimeMs, lastStatus: status })
       }
+      // Add to session index
+      addToIndex(sessionId, {
+        projectPath: null,
+        projectName: basename(join(filePath, '..')),
+        source: 'cli',
+        title: '',
+        timestamp: Date.now(),
+      })
     } catch { /* file may have been deleted */ }
   }
 

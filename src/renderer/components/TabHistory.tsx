@@ -325,17 +325,6 @@ export function TabHistory({ sessions, stats, onHide, onUnhide, onDelete, showHi
                     🗑️
                   </button>
                 </div>
-                {hoveredSessionId === s.sessionId && (
-                  <CarbonTooltip
-                    model={s.primaryModel}
-                    inputTokens={s.tokens.input}
-                    outputTokens={s.tokens.output}
-                    totalTokens={s.tokens.total}
-                    durationSeconds={s.durationSeconds}
-                    factors={carbonFactors}
-                    style={{ position: 'absolute', right: 0, top: '100%', zIndex: 100 }}
-                  />
-                )}
               </div>
             )
           })}

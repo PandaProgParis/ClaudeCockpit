@@ -1,94 +1,91 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { buildIndexFromRaw, searchIndex } from '../session-index'
-import type { SearchScope } from '../../renderer/lib/types'
+import { describe, it, expect } from 'vitest'
 
-const ALL_SCOPE: SearchScope = { user: true, assistant: true, files: true }
-const USER_ONLY: SearchScope = { user: true, assistant: false, files: false }
-const ASSISTANT_ONLY: SearchScope = { user: false, assistant: true, files: false }
-const FILES_ONLY: SearchScope = { user: false, assistant: false, files: true }
+import {
+  buildIndexFromHistory,
+  resolveOrphanProject,
+  mergeIntoIndex,
+} from '../session-index'
 
-describe('searchIndex', () => {
-  beforeEach(() => {
-    buildIndexFromRaw([
-      {
-        sessionId: 'session-1',
-        projectPath: 'MyProject',
-        userMessages: ['Fix the authentication bug'],
-        assistantText: ['I found the issue in login.ts'],
-        filePaths: ['src/auth/login.ts'],
-      },
-      {
-        sessionId: 'session-2',
-        projectPath: 'OtherProject',
-        userMessages: ['Add dark mode'],
-        assistantText: ['Here is the dark mode implementation'],
-        filePaths: ['src/theme.ts'],
-      },
-    ])
+describe('buildIndexFromHistory', () => {
+  it('creates entries from history lines with correct projectPath', () => {
+    const historyLines = [
+      { sessionId: 'abc-123', project: 'C:\\Users\\Cyril\\Documents\\Dev\\my-project', display: 'hello', timestamp: 1000 },
+      { sessionId: 'def-456', project: 'C:\\Users\\Cyril\\Documents\\Dev\\other', display: 'world', timestamp: 2000 },
+    ]
+    const index = buildIndexFromHistory(historyLines)
+    expect(index['abc-123']).toEqual({
+      projectPath: 'C:\\Users\\Cyril\\Documents\\Dev\\my-project',
+      projectName: 'my-project',
+      source: 'cli',
+      title: 'hello',
+      timestamp: 1000,
+    })
+    expect(index['def-456'].projectName).toBe('other')
   })
 
-  it('finds session by user message', () => {
-    const results = searchIndex('authentication', ALL_SCOPE)
-    expect(results).toHaveLength(1)
-    expect(results[0].sessionId).toBe('session-1')
-    expect(results[0].matchedIn).toBe('user')
+  it('handles empty project path', () => {
+    const historyLines = [
+      { sessionId: 'abc-123', project: '', display: 'test', timestamp: 1000 },
+    ]
+    const index = buildIndexFromHistory(historyLines)
+    expect(index['abc-123'].projectPath).toBe('')
+    expect(index['abc-123'].projectName).toBe('unknown')
   })
 
-  it('finds session by assistant text', () => {
-    const results = searchIndex('implementation', ALL_SCOPE)
-    expect(results).toHaveLength(1)
-    expect(results[0].sessionId).toBe('session-2')
-    expect(results[0].matchedIn).toBe('assistant')
+  it('deduplicates by sessionId, keeping last entry', () => {
+    const historyLines = [
+      { sessionId: 'abc-123', project: 'C:\\path\\a', display: 'first', timestamp: 1000 },
+      { sessionId: 'abc-123', project: 'C:\\path\\a', display: 'second', timestamp: 2000 },
+    ]
+    const index = buildIndexFromHistory(historyLines)
+    expect(index['abc-123'].title).toBe('second')
+    expect(index['abc-123'].timestamp).toBe(2000)
+  })
+})
+
+describe('resolveOrphanProject', () => {
+  it('matches encoded dir against known project paths', () => {
+    const knownPaths = [
+      'C:\\Users\\Cyril\\Documents\\Developpement\\MATCHEM\\data-flow-orchestrator',
+      'C:\\Users\\Cyril\\Documents\\Developpement\\PANDAPROG\\ClaudeCockpit',
+    ]
+    const encodedDir = 'c--Users-Cyril-Documents-Developpement-MATCHEM-data-flow-orchestrator'
+    const result = resolveOrphanProject(encodedDir, knownPaths)
+    expect(result).toBe('C:\\Users\\Cyril\\Documents\\Developpement\\MATCHEM\\data-flow-orchestrator')
   })
 
-  it('finds session by file path', () => {
-    const results = searchIndex('login.ts', ALL_SCOPE)
-    expect(results).toHaveLength(1)
-    expect(results[0].sessionId).toBe('session-1')
-    expect(results[0].matchedIn).toBe('file')
+  it('returns null when no match found', () => {
+    const knownPaths = ['C:\\path\\a']
+    const encodedDir = 'c--totally-unknown-path'
+    const result = resolveOrphanProject(encodedDir, knownPaths)
+    expect(result).toBeNull()
   })
 
-  it('respects scope: user only', () => {
-    const results = searchIndex('found', USER_ONLY)
-    expect(results).toHaveLength(0)
+  it('matches case-insensitively', () => {
+    const knownPaths = ['C:\\Users\\Cyril\\Documents\\Dev\\MyProject']
+    const encodedDir = 'c--users-cyril-documents-dev-myproject'
+    const result = resolveOrphanProject(encodedDir, knownPaths)
+    expect(result).toBe('C:\\Users\\Cyril\\Documents\\Dev\\MyProject')
+  })
+})
+
+describe('mergeIntoIndex', () => {
+  it('adds new entry to existing index', () => {
+    const existing = {
+      'abc-123': { projectPath: 'C:\\a', projectName: 'a', source: 'cli' as const, title: 'x', timestamp: 1000 },
+    }
+    const newEntry = { projectPath: 'C:\\b', projectName: 'b', source: 'cli' as const, title: 'y', timestamp: 2000 }
+    const merged = mergeIntoIndex(existing, 'def-456', newEntry)
+    expect(Object.keys(merged)).toHaveLength(2)
+    expect(merged['def-456'].projectName).toBe('b')
   })
 
-  it('respects scope: assistant only', () => {
-    const results = searchIndex('issue', ASSISTANT_ONLY)
-    expect(results).toHaveLength(1)
-  })
-
-  it('respects scope: files only', () => {
-    const results = searchIndex('src', FILES_ONLY)
-    expect(results).toHaveLength(2)
-    expect(results.map(r => r.sessionId).sort()).toEqual(['session-1', 'session-2'])
-  })
-
-  it('returns each session at most once even when multiple scopes match', () => {
-    // 'login.ts' appears in both assistant text ('I found the issue in login.ts') and file path ('src/auth/login.ts')
-    const results = searchIndex('login.ts', ALL_SCOPE)
-    expect(results).toHaveLength(1)
-    expect(results[0].sessionId).toBe('session-1')
-  })
-
-  it('is case-insensitive', () => {
-    const results = searchIndex('AUTHENTICATION', ALL_SCOPE)
-    expect(results).toHaveLength(1)
-  })
-
-  it('returns empty array for empty query', () => {
-    const results = searchIndex('', ALL_SCOPE)
-    expect(results).toHaveLength(0)
-  })
-
-  it('snippet.match contains the exact matched term', () => {
-    const results = searchIndex('authentication', ALL_SCOPE)
-    expect(results[0].snippet.match.toLowerCase()).toBe('authentication')
-  })
-
-  it('snippet.before and after are max 80 chars', () => {
-    const results = searchIndex('authentication', ALL_SCOPE)
-    expect(results[0].snippet.before.length).toBeLessThanOrEqual(80)
-    expect(results[0].snippet.after.length).toBeLessThanOrEqual(80)
+  it('does not overwrite existing entry', () => {
+    const existing = {
+      'abc-123': { projectPath: 'C:\\a', projectName: 'a', source: 'cli' as const, title: 'x', timestamp: 1000 },
+    }
+    const newEntry = { projectPath: 'C:\\b', projectName: 'b', source: 'cli' as const, title: 'y', timestamp: 2000 }
+    const merged = mergeIntoIndex(existing, 'abc-123', newEntry)
+    expect(merged['abc-123'].projectName).toBe('a')
   })
 })

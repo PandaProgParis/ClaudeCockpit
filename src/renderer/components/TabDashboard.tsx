@@ -24,6 +24,8 @@ interface Props {
   carbonQuota: number
   onNavigateToCarbon: () => void
   showCarbonWidget: boolean
+  coworkSessionCount?: number
+  coworkCostUSD?: number
 }
 
 const sectionTitleStyle: React.CSSProperties = {
@@ -35,7 +37,7 @@ const sectionTitleStyle: React.CSSProperties = {
   letterSpacing: '0.5px',
 }
 
-export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitManualUsage, onGoToHistory, onGoToSession, carbonFactors, carbonQuota, onNavigateToCarbon, showCarbonWidget }: Props) {
+export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitManualUsage, onGoToHistory, onGoToSession, carbonFactors, carbonQuota, onNavigateToCarbon, showCarbonWidget, coworkSessionCount, coworkCostUSD }: Props) {
   const exact = useExactNumbers()
   const { t, locale } = useLanguage()
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
@@ -122,6 +124,19 @@ export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitM
           )}
         </div>
       </div>
+
+      {/* Cowork summary */}
+      {coworkSessionCount !== undefined && coworkSessionCount > 0 && (
+        <div
+          className="flex items-center gap-2"
+          style={{ fontSize: 11, color: 'var(--text-muted)', padding: '4px 0' }}
+        >
+          <span style={{ fontWeight: 600 }}>Cowork:</span>
+          <span>{coworkSessionCount} sessions</span>
+          <span>·</span>
+          <span style={{ fontWeight: 700, color: 'var(--text)' }}>{formatCost(coworkCostUSD ?? 0)}</span>
+        </div>
+      )}
 
       {/* Recent history */}
       <div>

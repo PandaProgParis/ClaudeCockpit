@@ -5,49 +5,11 @@ import { join, basename } from 'path'
 import { createInterface } from 'readline'
 import type { SessionEntry } from '../renderer/lib/types'
 import { estimateCost } from '../renderer/lib/cost'
+import { lookupSession } from './session-index'
 
 const CLAUDE_DIR = join(homedir(), '.claude')
 const HISTORY_FILE = join(CLAUDE_DIR, 'history.jsonl')
 const PROJECTS_DIR = join(CLAUDE_DIR, 'projects')
-
-// --- Project name decoding ---
-
-/**
- * Decode encoded directory name back to the last folder name of the original path.
- * Encoding is: path.replace(/[^a-zA-Z0-9]/g, '-')
- * We can't perfectly reverse this, but we can try to match against the homedir prefix
- * and extract the trailing portion.
- */
-function decodeProjectName(encoded: string): string {
-  // Encode the homedir to find the common prefix
-  const home = homedir().replace(/[^a-zA-Z0-9]/g, '-')
-  let rest = encoded
-  // Strip homedir prefix (case-insensitive)
-  if (encoded.toLowerCase().startsWith(home.toLowerCase())) {
-    rest = encoded.slice(home.length)
-  }
-  // Remove leading dashes
-  rest = rest.replace(/^-+/, '')
-  // Now rest might be something like "Documents-Developpement-MATCHEM-redac-ihm-saisie-api"
-  // We want the last real folder name. Since we can't distinguish folder separators from
-  // hyphens in folder names, we take everything after the last known parent folder.
-  // Heuristic: look for common parent patterns and take everything after the last one
-  const knownParents = ['Documents-Developpement-']
-  for (const parent of knownParents) {
-    const idx = rest.indexOf(parent)
-    if (idx >= 0) {
-      rest = rest.slice(idx + parent.length)
-      break
-    }
-  }
-  if (!rest || rest === encoded) {
-    // Could not strip prefix — check if it's just the homedir
-    const homeEncoded = homedir().replace(/[^a-zA-Z0-9]/g, '-')
-    if (encoded.toLowerCase() === homeEncoded.toLowerCase()) return '~'
-    return encoded
-  }
-  return rest
-}
 
 // --- Types for raw JSONL data ---
 
@@ -380,9 +342,11 @@ export async function parseAllSessions(onProgress?: ProgressCallback): Promise<S
     done++; onProgress?.(done, totalTasks)
     if (!parsed || (parsed.tokens.total === 0 && parsed.durationSeconds === 0)) return null
 
-    const projectName = decodeProjectName(task.dir)
+    const indexEntry = lookupSession(task.sessionId)
+    const projectPath = indexEntry?.projectPath ?? task.dir
+    const projectName = indexEntry?.projectName ?? task.dir
     return {
-      sessionId: task.sessionId, title: parsed.title, projectPath: task.dir, projectName,
+      sessionId: task.sessionId, title: parsed.title, projectPath, projectName,
       startedAt: parsed.startedAt, endedAt: parsed.endedAt, durationSeconds: parsed.durationSeconds,
       entrypoint: parsed.entrypoint, models: parsed.models, primaryModel: parsed.primaryModel,
       usedThinking: parsed.usedThinking, tokens: parsed.tokens,

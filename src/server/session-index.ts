@@ -1,10 +1,166 @@
-import { join } from 'path'
+import { readdir } from 'fs/promises'
+import { join, basename } from 'path'
 import { homedir } from 'os'
-import { findSessionDirBySessionId, resolveProjectDirName, parallel, streamLines } from './history-parser'
-import type { SearchScope, SearchResult, SessionEntry } from '../renderer/lib/types'
+import { findSessionDirBySessionId, resolveProjectDirName, parallel, streamLines, readHistoryIndex } from './history-parser'
+import { readAppData, writeAppData } from './app-data'
+import type { SearchScope, SearchResult, SessionEntry, SessionIndexEntry, SessionIndex } from '../renderer/lib/types'
 
 // PROJECTS_DIR is not exported from history-parser.ts, so we keep it local here.
 const PROJECTS_DIR = join(homedir(), '.claude', 'projects')
+const INDEX_FILE = 'session-index.json'
+
+// ─── Pure logic for session index (exported for testing) ─────
+
+export function buildIndexFromHistory(
+  historyLines: { sessionId: string; project: string; display: string; timestamp: number }[]
+): Record<string, SessionIndexEntry> {
+  const entries: Record<string, SessionIndexEntry> = {}
+  for (const line of historyLines) {
+    entries[line.sessionId] = {
+      projectPath: line.project,
+      projectName: line.project ? basename(line.project) : 'unknown',
+      source: 'cli',
+      title: line.display || '',
+      timestamp: line.timestamp,
+    }
+  }
+  return entries
+}
+
+export function resolveOrphanProject(
+  encodedDir: string,
+  knownPaths: string[]
+): string | null {
+  const encodedLower = encodedDir.toLowerCase()
+  for (const p of knownPaths) {
+    const encoded = resolveProjectDirName(p).toLowerCase()
+    if (encoded === encodedLower) return p
+  }
+  return null
+}
+
+export function mergeIntoIndex(
+  existing: Record<string, SessionIndexEntry>,
+  sessionId: string,
+  entry: SessionIndexEntry
+): Record<string, SessionIndexEntry> {
+  if (existing[sessionId]) return existing
+  return { ...existing, [sessionId]: entry }
+}
+
+// ─── I/O layer for session index ──────────────────────────────
+
+let memoryIndex: SessionIndex | null = null
+
+export async function loadIndex(): Promise<SessionIndex> {
+  if (memoryIndex) return memoryIndex
+  memoryIndex = await readAppData<SessionIndex>(INDEX_FILE, { version: 1, builtAt: '', sessions: {} })
+  return memoryIndex
+}
+
+export async function rebuildIndex(): Promise<SessionIndex> {
+  // 1. Read history.jsonl
+  const historyLines = await readHistoryIndex()
+  const sessions = buildIndexFromHistory(historyLines)
+
+  // 2. Collect all known project paths from history
+  const knownPaths = [...new Set(historyLines.map(h => h.project).filter(Boolean))]
+
+  // 3. Scan project directories for orphan sessions
+  let projectDirs: string[] = []
+  try {
+    projectDirs = await readdir(PROJECTS_DIR)
+  } catch { /* projects dir may not exist */ }
+
+  // Build dir -> Set<sessionId> cache
+  const dirSessionMap = new Map<string, Set<string>>()
+  for (const dir of projectDirs) {
+    const dirPath = join(PROJECTS_DIR, dir)
+    try {
+      const files = await readdir(dirPath)
+      const sessionIds = new Set(files.filter(f => f.endsWith('.jsonl')).map(f => basename(f, '.jsonl')))
+      dirSessionMap.set(dir, sessionIds)
+    } catch { /* skip */ }
+  }
+
+  // First pass: resolve orphans against known paths, add ALL to index
+  for (const [dir, sessionIds] of dirSessionMap) {
+    const resolved = resolveOrphanProject(dir, knownPaths)
+    for (const sessionId of sessionIds) {
+      if (sessions[sessionId]) continue
+      sessions[sessionId] = {
+        projectPath: resolved,
+        projectName: resolved ? basename(resolved) : dir,
+        source: 'cli',
+        title: '',
+        timestamp: 0,
+      }
+    }
+  }
+
+  // 4. Discover more paths by scanning parent AND grandparent directories
+  const parentDirs = [...new Set(knownPaths.map(p => join(p, '..')))]
+  const grandparentDirs = [...new Set(parentDirs.map(p => join(p, '..')))]
+  const allScanDirs = [...new Set([...parentDirs, ...grandparentDirs])]
+  const discoveredPaths: string[] = [...knownPaths]
+
+  for (const scanDir of allScanDirs) {
+    try {
+      const children = await readdir(scanDir)
+      for (const child of children) {
+        const childPath = join(scanDir, child)
+        discoveredPaths.push(childPath)
+        // Also scan one level deeper (e.g. PANDAPROG/ClaudeCockpit)
+        try {
+          const grandchildren = await readdir(childPath)
+          for (const gc of grandchildren) {
+            discoveredPaths.push(join(childPath, gc))
+          }
+        } catch { /* not a dir or inaccessible */ }
+      }
+    } catch { /* skip inaccessible dirs */ }
+  }
+
+  // Second pass: re-resolve still-unresolved orphans with expanded paths
+  for (const [sessionId, entry] of Object.entries(sessions)) {
+    if (entry.projectPath !== null) continue
+    // Find which directory this session belongs to
+    for (const [dir, sessionIds] of dirSessionMap) {
+      if (!sessionIds.has(sessionId)) continue
+      const resolved = resolveOrphanProject(dir, discoveredPaths)
+      if (resolved) {
+        entry.projectPath = resolved
+        entry.projectName = basename(resolved)
+      }
+      break
+    }
+  }
+
+  const index: SessionIndex = {
+    version: 1,
+    builtAt: new Date().toISOString(),
+    sessions,
+  }
+
+  memoryIndex = index
+  await writeAppData(INDEX_FILE, index)
+  return index
+}
+
+export function addToIndex(sessionId: string, entry: SessionIndexEntry): void {
+  if (!memoryIndex) return
+  if (memoryIndex.sessions[sessionId]) return
+  memoryIndex.sessions[sessionId] = entry
+  writeAppData(INDEX_FILE, memoryIndex).catch(() => {})
+}
+
+export function lookupSession(sessionId: string): SessionIndexEntry | null {
+  return memoryIndex?.sessions[sessionId] ?? null
+}
+
+export function getAllIndexEntries(): Record<string, SessionIndexEntry> {
+  return memoryIndex?.sessions ?? {}
+}
 
 // ─── Internal index ───────────────────────────────────────────
 

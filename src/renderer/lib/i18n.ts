@@ -224,6 +224,32 @@ export interface Translations {
   carbonPeriodYear: string
   carbonPeriodAll: string
   carbonShowOnDashboard: string
+
+  // Cowork tab
+  tabCowork: string
+  coworkSpaces: string
+  coworkPlugins: string
+  coworkSessions: string
+  coworkNoData: string
+  coworkCost: string
+  coworkTokens: string
+  coworkModels: string
+  coworkInitialMessage: string
+  coworkProcess: string
+  coworkSdkVersion: string
+  coworkHostLoop: string
+  coworkMcpToolsActive: string
+  coworkSlashCommands: string
+  coworkMore: (count: number) => string
+  coworkArchived: string
+  coworkLoop: string
+  coworkDirSize: string
+  coworkSortRecent: string
+  coworkSortOldest: string
+  coworkSortCost: string
+  coworkSortTokens: string
+  coworkFilterModel: string
+  coworkFilterAll: string
 }
 
 export const en: Translations = {
@@ -433,6 +459,32 @@ export const en: Translations = {
   carbonPeriodYear: 'This year',
   carbonPeriodAll: 'All time',
   carbonShowOnDashboard: 'Show on dashboard',
+
+  // Cowork
+  tabCowork: 'Cowork',
+  coworkSpaces: 'Spaces',
+  coworkPlugins: 'Plugins',
+  coworkSessions: 'Sessions',
+  coworkNoData: 'No Cowork data found. Claude Desktop Cowork must be installed.',
+  coworkCost: 'Cost',
+  coworkTokens: 'Tokens',
+  coworkModels: 'Models',
+  coworkInitialMessage: 'Initial message',
+  coworkProcess: 'Process',
+  coworkSdkVersion: 'SDK Version',
+  coworkHostLoop: 'Host Loop',
+  coworkMcpToolsActive: 'Active MCP tools',
+  coworkSlashCommands: 'Slash commands',
+  coworkMore: (count) => `+${count} more`,
+  coworkArchived: 'ARCHIVED',
+  coworkLoop: 'LOOP',
+  coworkDirSize: 'Size',
+  coworkSortRecent: 'Most recent',
+  coworkSortOldest: 'Oldest',
+  coworkSortCost: 'Cost',
+  coworkSortTokens: 'Tokens',
+  coworkFilterModel: 'Model',
+  coworkFilterAll: 'All',
 }
 
 export const fr: Translations = {
@@ -642,6 +694,32 @@ export const fr: Translations = {
   carbonPeriodYear: 'Cette année',
   carbonPeriodAll: 'Tout',
   carbonShowOnDashboard: 'Afficher sur le dashboard',
+
+  // Cowork
+  tabCowork: 'Cowork',
+  coworkSpaces: 'Espaces',
+  coworkPlugins: 'Plugins',
+  coworkSessions: 'Sessions',
+  coworkNoData: 'Aucune donnee Cowork trouvee. Claude Desktop Cowork doit etre installe.',
+  coworkCost: 'Cout',
+  coworkTokens: 'Tokens',
+  coworkModels: 'Modeles',
+  coworkInitialMessage: 'Message initial',
+  coworkProcess: 'Process',
+  coworkSdkVersion: 'Version SDK',
+  coworkHostLoop: 'Host Loop',
+  coworkMcpToolsActive: 'MCP tools actifs',
+  coworkSlashCommands: 'Slash commands',
+  coworkMore: (count) => `+${count} autres`,
+  coworkArchived: 'ARCHIVEE',
+  coworkLoop: 'LOOP',
+  coworkDirSize: 'Taille',
+  coworkSortRecent: 'Plus recente',
+  coworkSortOldest: 'Plus ancienne',
+  coworkSortCost: 'Cout',
+  coworkSortTokens: 'Tokens',
+  coworkFilterModel: 'Modele',
+  coworkFilterAll: 'Tous',
 }
 
 const translations: Record<Locale, Translations> = { en, fr }
