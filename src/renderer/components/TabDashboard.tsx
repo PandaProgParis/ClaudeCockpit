@@ -41,6 +41,7 @@ export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitM
   const exact = useExactNumbers()
   const { t, locale } = useLanguage()
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
+  const [showLegend, setShowLegend] = useState(false)
   const [quotaDismissed, setQuotaDismissed] = useState(() => {
     const stored = localStorage.getItem('carbon-quota-dismissed')
     if (!stored) return false
@@ -220,15 +221,28 @@ export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitM
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Legend */}
-      {activeSessions.length > 0 && (
+      {/* Legend toggle */}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <button
+          onClick={() => setShowLegend(v => !v)}
+          style={{
+            background: 'none', border: '1px solid var(--border)', borderRadius: 6,
+            padding: '4px 14px', fontSize: 10, color: 'var(--text-muted)',
+            cursor: 'pointer', transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)' }}
+        >
+          {t.legend} {showLegend ? '▴' : '▾'}
+        </button>
+      </div>
+      {showLegend && (
         <div style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
           padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 4, fontSize: 10, color: 'var(--text-muted)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>{t.legend}</div>
               <div><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#D4A574', marginRight: 6, verticalAlign: 'middle' }} /><b>Input</b> — {t.legendInput}</div>
               <div><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#8BB8E0', marginRight: 6, verticalAlign: 'middle' }} /><b>Output</b> — {t.legendOutput}</div>
               <div><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: '#C9A0DC', marginRight: 6, verticalAlign: 'middle' }} /><b>Cache write</b> — {t.legendCacheWrite}</div>
