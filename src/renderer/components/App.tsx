@@ -22,8 +22,9 @@ import type { CarbonFactors } from '../lib/carbon'
 import { DEFAULT_CARBON_FACTORS } from '../lib/carbon'
 import { TabCowork } from './TabCowork'
 import { useCowork } from '../hooks/useCowork'
+import { TabTemporal } from './TabTemporal'
 
-type Tab = 'dashboard' | 'history' | 'projects' | 'mcp' | 'skills' | 'permissions' | 'carbon' | 'cowork'
+type Tab = 'dashboard' | 'history' | 'projects' | 'mcp' | 'skills' | 'permissions' | 'carbon' | 'cowork' | 'temporal'
 
 function getTabs(t: Translations): { id: Tab; label: string }[] {
   return [
@@ -32,6 +33,7 @@ function getTabs(t: Translations): { id: Tab; label: string }[] {
     { id: 'history', label: t.tabHistory },
     { id: 'cowork', label: t.tabCowork },
     { id: 'carbon', label: t.tabCarbon },
+    { id: 'temporal', label: t.tabTemporal },
     { id: 'mcp', label: 'MCP' },
     { id: 'skills', label: 'Skills & Plugins' },
     { id: 'permissions', label: 'Permissions' },
@@ -303,6 +305,9 @@ export function App() {
             t={t}
             exactNumbers={exactNumbers}
           />
+        )}
+        {tab === 'temporal' && (
+          <TabTemporal sessions={history.sessions} />
         )}
       </div>
 

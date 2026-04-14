@@ -250,6 +250,26 @@ export interface Translations {
   coworkSortTokens: string
   coworkFilterModel: string
   coworkFilterAll: string
+
+  // Temporal tab
+  tabTemporal: string
+  temporalPeriod5h: string
+  temporalPeriodHourly: string
+  temporalPeriodDaily: string
+  temporalPeriodWeekly: string
+  temporalAvgCost: string
+  temporalAvgTokens: string
+  temporalPeak: string
+  temporalAvgSessions: string
+  temporalToggleTokens: string
+  temporalToggleCost: string
+  temporalHeatmapTitle: string
+  temporalAllProjects: string
+  temporalPeriodLabel: string
+  temporalSessions: string
+  temporalWorkDuration: string
+  temporalMainModel: string
+  temporalNoBuckets: string
 }
 
 export const en: Translations = {
@@ -485,6 +505,26 @@ export const en: Translations = {
   coworkSortTokens: 'Tokens',
   coworkFilterModel: 'Model',
   coworkFilterAll: 'All',
+
+  // Temporal
+  tabTemporal: 'Temporal',
+  temporalPeriod5h: '5h windows',
+  temporalPeriodHourly: 'Hourly',
+  temporalPeriodDaily: 'Daily',
+  temporalPeriodWeekly: 'Weekly',
+  temporalAvgCost: 'Avg cost',
+  temporalAvgTokens: 'Avg tokens',
+  temporalPeak: 'Peak usage',
+  temporalAvgSessions: 'Avg sessions',
+  temporalToggleTokens: 'Tokens',
+  temporalToggleCost: 'Cost',
+  temporalHeatmapTitle: 'Hourly activity pattern',
+  temporalAllProjects: 'All projects',
+  temporalPeriodLabel: 'Period',
+  temporalSessions: 'Sessions',
+  temporalWorkDuration: 'Work duration',
+  temporalMainModel: 'Main model',
+  temporalNoBuckets: 'No data for this period',
 }
 
 export const fr: Translations = {
@@ -720,6 +760,26 @@ export const fr: Translations = {
   coworkSortTokens: 'Tokens',
   coworkFilterModel: 'Modele',
   coworkFilterAll: 'Tous',
+
+  // Temporal
+  tabTemporal: 'Temporel',
+  temporalPeriod5h: 'Fenêtres 5h',
+  temporalPeriodHourly: 'Par heure',
+  temporalPeriodDaily: 'Par jour',
+  temporalPeriodWeekly: 'Par semaine',
+  temporalAvgCost: 'Coût moyen',
+  temporalAvgTokens: 'Tokens moyens',
+  temporalPeak: "Pic d'utilisation",
+  temporalAvgSessions: 'Sessions moy.',
+  temporalToggleTokens: 'Tokens',
+  temporalToggleCost: 'Coût',
+  temporalHeatmapTitle: "Répartition horaire de l'activité",
+  temporalAllProjects: 'Tous les projets',
+  temporalPeriodLabel: 'Période',
+  temporalSessions: 'Sessions',
+  temporalWorkDuration: 'Durée travail',
+  temporalMainModel: 'Modèle principal',
+  temporalNoBuckets: 'Aucune donnée pour cette période',
 }
 
 const translations: Record<Locale, Translations> = { en, fr }

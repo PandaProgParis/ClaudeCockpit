@@ -191,3 +191,36 @@ export interface SessionIndex {
   builtAt: string
   sessions: Record<string, SessionIndexEntry>
 }
+
+// --- Temporal stats types ---
+
+export type TimePeriod = '5h-window' | 'hourly' | 'daily' | 'weekly'
+
+export interface TimeBucket {
+  label: string
+  start: string
+  end: string
+  sessionCount: number
+  tokens: {
+    input: number
+    output: number
+    cacheCreation: number
+    cacheRead: number
+    total: number
+  }
+  costUSD: number
+  durationSeconds: number
+  models: Record<string, number>
+  projects: Record<string, number>
+}
+
+export interface TemporalStats {
+  period: TimePeriod
+  buckets: TimeBucket[]
+  totals: {
+    avgTokensPerBucket: number
+    avgCostPerBucket: number
+    avgSessionsPerBucket: number
+    peakBucket: TimeBucket | null
+  }
+}
