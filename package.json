@@ -2,6 +2,7 @@
   "name": "claude-cockpit",
   "version": "0.1.0",
   "description": "Personal Claude Code session history viewer",
+  "main": "dist/electron/main.js",
   "scripts": {
     "dev": "concurrently -k -n server,vite -c cyan,green \"tsx watch src/server/index.ts\" \"vite\"",
     "build": "vite build",
@@ -9,7 +10,10 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build:extension": "rm -rf dist/extension && mkdir -p dist/extension && cp -r chrome-extension/* dist/extension/",
-    "package:extension": "npm run build:extension && cd dist && zip -r claudecockpit-extension.zip extension/ && echo 'Extension packaged: dist/claudecockpit-extension.zip'"
+    "package:extension": "npm run build:extension && cd dist && zip -r claudecockpit-extension.zip extension/ && echo 'Extension packaged: dist/claudecockpit-extension.zip'",
+    "electron:dev": "concurrently -k -n server,vite,electron -c cyan,green,yellow \"tsx watch src/server/index.ts\" \"vite\" \"wait-on http://localhost:3001 && wait-on http://localhost:5200 && electron .\"",
+    "electron:build": "vite build && tsc -p tsconfig.electron.json && node -e \"require('esbuild').buildSync({entryPoints:['src/server/index.ts'],bundle:true,platform:'node',format:'cjs',outfile:'dist/server/index.js',external:['chokidar','express','open','fsevents']})\"",
+    "electron:dist": "npm run electron:build && electron-builder"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
@@ -19,6 +23,8 @@
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.0",
     "concurrently": "^9.0.0",
+    "electron": "^41.2.0",
+    "electron-builder": "^26.8.1",
     "postcss": "^8.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -28,7 +34,8 @@
     "tsx": "^4.0.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "wait-on": "^9.0.5"
   },
   "dependencies": {
     "chokidar": "^5.0.0",

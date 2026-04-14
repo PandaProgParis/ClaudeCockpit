@@ -1,0 +1,53 @@
+appId: com.pandaprog.claude-cockpit
+productName: Claude Cockpit
+copyright: Copyright © 2026 PandaProg
+
+directories:
+  output: dist/installers
+  buildResources: electron
+
+files:
+  - dist/client/**/*
+  - dist/electron/**/*
+  - dist/server/**/*
+  - node_modules/**/*
+  - package.json
+
+extraResources:
+  - from: electron/icon.png
+    to: icon.png
+
+win:
+  target:
+    - target: portable
+      arch:
+        - x64
+    - target: nsis
+      arch:
+        - x64
+  icon: electron/icon.png
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: electron/icon.png
+  category: public.app-category.developer-tools
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: electron/icon.png
+  category: Development

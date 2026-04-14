@@ -454,43 +454,54 @@ if (IS_PROD) {
   })
 }
 
-app.listen(PORT, async () => {
-  const url = `http://localhost:${PORT}`
-  console.log(`Claude History Viewer → ${url}`)
+export function startServer(): Promise<void> {
+  return new Promise((resolve) => {
+    app.listen(PORT, async () => {
+      const url = `http://localhost:${PORT}`
+      console.log(`Claude History Viewer → ${url}`)
 
-  // Build session index FIRST (must complete before parsing sessions)
-  try {
-    const idx = await rebuildIndex()
-    console.log(`Session index built: ${Object.keys(idx.sessions).length} sessions`)
-  } catch (err) {
-    console.error('Failed to build session index:', err)
-  }
-
-  // Start session watcher with SSE broadcasting
-  console.log('Starting session watcher...')
-  startWatcher((event) => {
-    console.log(`[SSE] ${event.type}`, 'data' in event ? ('sessionId' in event.data ? event.data.sessionId.substring(0, 8) : '') : '')
-    broadcast(event.type, event.data)
-    if (event.type === 'session:active') {
-      updateIndexForSession(event.data.sessionId, event.data.projectPath).catch(() => {})
-    }
-  })
-
-  // Build search index after initial session parse (index is ready now)
-  getSessions().then(sessions => buildIndex(sessions)).catch(() => {})
-
-  // Start usage polling (every 5 minutes)
-  setInterval(async () => {
-    try {
-      const usage = await fetchUsage()
-      if (usage) {
-        await processUsageUpdate(usage, await getSessions())
+      // Build session index FIRST (must complete before parsing sessions)
+      try {
+        const idx = await rebuildIndex()
+        console.log(`Session index built: ${Object.keys(idx.sessions).length} sessions`)
+      } catch (err) {
+        console.error('Failed to build session index:', err)
       }
-    } catch { /* silent fail */ }
-  }, 5 * 60 * 1000)
 
-  if (IS_PROD && !process.env.DOCKER) {
-    const { default: open } = await import('open')
-    open(url).catch(() => {})
-  }
-})
+      // Start session watcher with SSE broadcasting
+      console.log('Starting session watcher...')
+      startWatcher((event) => {
+        console.log(`[SSE] ${event.type}`, 'data' in event ? ('sessionId' in event.data ? event.data.sessionId.substring(0, 8) : '') : '')
+        broadcast(event.type, event.data)
+        if (event.type === 'session:active') {
+          updateIndexForSession(event.data.sessionId, event.data.projectPath).catch(() => {})
+        }
+      })
+
+      // Build search index after initial session parse (index is ready now)
+      getSessions().then(sessions => buildIndex(sessions)).catch(() => {})
+
+      // Start usage polling (every 5 minutes)
+      setInterval(async () => {
+        try {
+          const usage = await fetchUsage()
+          if (usage) {
+            await processUsageUpdate(usage, await getSessions())
+          }
+        } catch { /* silent fail */ }
+      }, 5 * 60 * 1000)
+
+      if (IS_PROD && !process.env.DOCKER && !process.env.ELECTRON) {
+        const { default: open } = await import('open')
+        open(url).catch(() => {})
+      }
+
+      resolve()
+    })
+  })
+}
+
+// Auto-start when run directly (not imported by Electron)
+if (!process.env.ELECTRON) {
+  startServer()
+}
