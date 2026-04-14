@@ -12,7 +12,7 @@
     "build:extension": "rm -rf dist/extension && mkdir -p dist/extension && cp -r chrome-extension/* dist/extension/",
     "package:extension": "npm run build:extension && cd dist && zip -r claudecockpit-extension.zip extension/ && echo 'Extension packaged: dist/claudecockpit-extension.zip'",
     "electron:dev": "concurrently -k -n server,vite,electron -c cyan,green,yellow \"tsx watch src/server/index.ts\" \"vite\" \"wait-on http://localhost:3001 && wait-on http://localhost:5200 && electron .\"",
-    "electron:build": "vite build && tsc -p tsconfig.electron.json && node -e \"require('esbuild').buildSync({entryPoints:['src/server/index.ts'],bundle:true,platform:'node',format:'cjs',outfile:'dist/server/index.js',external:['chokidar','express','open','fsevents']})\"",
+    "electron:build": "vite build && node -e \"const b=require('esbuild').buildSync;b({entryPoints:['electron/main.ts'],bundle:true,platform:'node',format:'cjs',outfile:'dist/electron/main.js',external:['electron']});b({entryPoints:['src/server/index.ts'],bundle:true,platform:'node',format:'cjs',outfile:'dist/server/index.js',external:['express','fsevents']})\"",
     "electron:dist": "npm run electron:build && electron-builder"
   },
   "devDependencies": {
@@ -23,7 +23,7 @@
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.0",
     "concurrently": "^9.0.0",
-    "electron": "^41.2.0",
+    "electron": "^33.4.11",
     "electron-builder": "^26.8.1",
     "postcss": "^8.4.0",
     "react": "^19.0.0",

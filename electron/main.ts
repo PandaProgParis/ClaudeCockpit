@@ -1,5 +1,19 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, dialog } from 'electron'
 import * as path from 'path'
+import * as fs from 'fs'
+
+function logToFile(msg: string): void {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'main.log')
+    fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`)
+  } catch {}
+}
+
+process.on('uncaughtException', (err) => {
+  logToFile(`UNCAUGHT: ${err.stack || err.message}`)
+  dialog.showErrorBox('Claude Cockpit Error', err.stack || err.message)
+  app.quit()
+})
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -7,13 +21,12 @@ let isQuitting = false
 
 const PORT = 3001
 const DEV_PORT = 5200
-const isDev = !app.isPackaged
 
 function getIconPath(): string {
-  if (isDev) {
-    return path.join(__dirname, '..', 'electron', 'icon.png')
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'icon.png')
   }
-  return path.join(process.resourcesPath, 'icon.png')
+  return path.join(__dirname, '..', 'electron', 'icon.png')
 }
 
 function createWindow(): void {
@@ -28,9 +41,9 @@ function createWindow(): void {
     },
   })
 
-  const url = isDev
-    ? `http://localhost:${DEV_PORT}`
-    : `http://localhost:${PORT}`
+  const url = app.isPackaged
+    ? `http://localhost:${PORT}`
+    : `http://localhost:${DEV_PORT}`
 
   mainWindow.loadURL(url)
 
@@ -77,39 +90,16 @@ async function startExpressServer(): Promise<void> {
   process.env.ELECTRON = '1'
   process.env.NODE_ENV = 'production'
 
-  if (isDev) {
+  if (!app.isPackaged) {
     // In dev mode, Express is already running via concurrently
-    // Just wait for it to be available
     return
   }
 
   // In packaged mode, load the bundled server (compiled by esbuild)
-  const serverPath = path.join(__dirname, '..', 'dist', 'server', 'index.js')
+  const serverPath = path.join(__dirname, '..', 'server', 'index.js')
   const { startServer } = require(serverPath)
   await startServer()
 }
-
-app.on('ready', async () => {
-  try {
-    await startExpressServer()
-  } catch (err) {
-    console.error('Failed to start Express server:', err)
-    app.quit()
-    return
-  }
-
-  createTray()
-  createWindow()
-})
-
-app.on('before-quit', () => {
-  isQuitting = true
-})
-
-app.on('activate', () => {
-  // macOS: re-show window when clicking dock icon
-  mainWindow?.show()
-})
 
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock()
@@ -121,3 +111,31 @@ if (!gotTheLock) {
     mainWindow?.focus()
   })
 }
+
+app.on('ready', async () => {
+  logToFile('App ready event fired')
+  try {
+    logToFile('Starting Express server...')
+    await startExpressServer()
+    logToFile('Express server started')
+  } catch (err: any) {
+    logToFile(`Failed to start Express: ${err.stack || err.message}`)
+    dialog.showErrorBox('Claude Cockpit', `Server error: ${err.message}`)
+    app.quit()
+    return
+  }
+
+  logToFile('Creating tray and window...')
+  createTray()
+  createWindow()
+  logToFile('App fully initialized')
+})
+
+app.on('before-quit', () => {
+  isQuitting = true
+})
+
+app.on('activate', () => {
+  // macOS: re-show window when clicking dock icon
+  mainWindow?.show()
+})
