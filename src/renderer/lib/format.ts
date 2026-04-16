@@ -5,9 +5,14 @@ export function formatDuration(seconds: number): string {
     const s = seconds % 60
     return s > 0 ? `${m}m ${s}s` : `${m}m`
   }
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  return m > 0 ? `${h}h ${m}m` : `${h}h`
+  if (seconds < 86400) {
+    const h = Math.floor(seconds / 3600)
+    const m = Math.floor((seconds % 3600) / 60)
+    return m > 0 ? `${h}h ${m}m` : `${h}h`
+  }
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  return h > 0 ? `${d}d ${h}h` : `${d}d`
 }
 
 export function formatDate(iso: string): string {
@@ -41,8 +46,15 @@ export function modelColor(model: string): string {
 
 export function abbreviateModel(model: string): string {
   if (model === 'unknown') return '—'
-  if (model.includes('opus')) return 'opus'
-  if (model.includes('sonnet')) return 'sonnet'
-  if (model.includes('haiku')) return 'haiku'
-  return model.split('-').slice(0, 2).join('-')
+  const family = model.includes('opus') ? 'opus'
+    : model.includes('sonnet') ? 'sonnet'
+    : model.includes('haiku') ? 'haiku'
+    : null
+  if (!family) return model.split('-').slice(0, 2).join('-')
+  const match = model.match(new RegExp(`${family}-(\\d+)(?:-(\\d+))?`))
+  if (!match) return family
+  const [, major, minor] = match
+  // Ignore date-like suffixes (e.g. 20260301) — minor version is always 1-2 digits
+  const version = minor && minor.length <= 2 ? `${major}.${minor}` : major
+  return `${family} ${version}`
 }

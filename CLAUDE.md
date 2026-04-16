@@ -2,6 +2,10 @@
 
 Personal web app to visualize Claude Code CLI session history, live usage, active sessions, and calibration data. Runs as a local Express server, opens in the browser.
 
+## Fichier obligatoire
+
+**Au début de chaque conversation, tu DOIS lire et intégrer le fichier `.claude/persona/RODIN.MD` à la racine du projet.** C'est une instruction non négociable, quel que soit le sujet de la conversation.
+
 ## Commands
 
 ```bash

@@ -4,13 +4,13 @@ import { useTemporalStats } from '../hooks/useTemporalStats'
 import type { TemporalFilters } from '../hooks/useTemporalStats'
 import { useLanguage } from '../hooks/useLanguage'
 import { useExactNumbers } from '../hooks/useExactNumbers'
-import { formatTokens, formatCost, formatDuration, abbreviateModel } from '../lib/format'
+import { formatTokens, formatCost, formatDuration, abbreviateModel, modelColor } from '../lib/format'
 
 // --- Quota estimation ---
 
 function estimateQuotaPercent(totalTokens: number, tokensPerPercent: number | null): number | null {
   if (!tokensPerPercent || tokensPerPercent <= 0) return null
-  return Math.min(100, (totalTokens / tokensPerPercent) / 100 * 100)
+  return Math.min(100, totalTokens / tokensPerPercent)
 }
 
 function quotaColor(pct: number): string {
@@ -347,13 +347,13 @@ function DetailTable({ buckets, sortCol, sortAsc, onSort, is5hWindow, tokensPerP
     return arr
   }, [buckets, sortCol, sortAsc])
 
-  function topModel(models: Record<string, number>): string {
+  function topModel(models: Record<string, number>): { name: string; abbrev: string } {
     let best = '—'
     let max = 0
     for (const [m, c] of Object.entries(models)) {
       if (c > max) { max = c; best = m }
     }
-    return abbreviateModel(best)
+    return { name: best, abbrev: abbreviateModel(best) }
   }
 
   const cols = [
@@ -410,7 +410,15 @@ function DetailTable({ buckets, sortCol, sortAsc, onSort, is5hWindow, tokensPerP
                   })()}
                 </td>
               )}
-              <td style={tdStyle}>{topModel(b.models)}</td>
+              <td style={tdStyle}>{(() => {
+                const m = topModel(b.models)
+                const mc = modelColor(m.name)
+                return (
+                  <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: `${mc}22`, color: mc, whiteSpace: 'nowrap' }}>
+                    {m.abbrev}
+                  </span>
+                )
+              })()}</td>
             </tr>
           ))}
         </tbody>

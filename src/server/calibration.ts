@@ -28,13 +28,22 @@ export function computeTokensPerPercent(points: DeltaPoint[]): number | null {
   const valid = points.filter((p) => p.deltaApiPercent > 0)
   if (valid.length === 0) return null
 
-  // Take last 10 points, weight recent ones 2x
+  // Take last 10 points
   const recent = valid.slice(-10)
+  const ratios = recent.map((p) => p.deltaLocalTokens / p.deltaApiPercent)
+
+  // Filter outliers using median: exclude points > 3x or < 1/3 of median
+  const sorted = [...ratios].sort((a, b) => a - b)
+  const median = sorted[Math.floor(sorted.length / 2)]
+  const filtered = recent.filter((_, i) => ratios[i] >= median / 3 && ratios[i] <= median * 3)
+  if (filtered.length === 0) return median
+
+  // Weighted average: most recent gets 2x weight
   let weightedSum = 0
   let totalWeight = 0
-  recent.forEach((p, i) => {
+  filtered.forEach((p, i) => {
     const ratio = p.deltaLocalTokens / p.deltaApiPercent
-    const weight = i === recent.length - 1 ? 2 : 1 // most recent gets 2x
+    const weight = i === filtered.length - 1 ? 2 : 1
     weightedSum += ratio * weight
     totalWeight += weight
   })

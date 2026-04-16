@@ -170,20 +170,7 @@ export function TabDashboard({ usage, sessions, stats, activeSessions, onSubmitM
         <div style={sectionTitleStyle}>{t.activeSessions}</div>
         {activeSessions.length === 0 ? (
           <p style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>{t.noActiveSessions}</p>
-        ) : activeByProject.size <= 1 ? (
-          // Single project or ungrouped: render flat like before
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {activeSessions.map((s) => (
-              <ActiveSessionCard
-                key={s.sessionId}
-                session={s}
-                expanded={expandedSessionId === s.sessionId}
-                onToggleExpand={() => setExpandedSessionId(prev => prev === s.sessionId ? null : s.sessionId)}
-              />
-            ))}
-          </div>
         ) : (
-          // Multiple projects: group them
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {Array.from(activeByProject.entries()).map(([projectName, projectSessions]) => (
               <div key={projectName}>

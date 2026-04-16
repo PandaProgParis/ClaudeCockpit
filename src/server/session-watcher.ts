@@ -6,7 +6,7 @@ import { join, basename } from 'path'
 import { parseSessionFile } from './history-parser'
 import { estimateCost } from '../renderer/lib/cost'
 import { getContextLimit } from '../renderer/lib/cost'
-import { addToIndex } from './session-index'
+import { addToIndex, lookupSession } from './session-index'
 import type { ActiveSession } from '../renderer/lib/types'
 
 const PROJECTS_DIR = join(homedir(), '.claude', 'projects')
@@ -42,13 +42,24 @@ export async function getActiveSessions(): Promise<ActiveSession[]> {
     const parsed = await parseSessionFile(info.filePath)
     if (!parsed) continue
 
-    // Get the project name from the directory structure
-    const parts = info.filePath.split(/[\\/]/)
-    const projectDirIndex = parts.indexOf('projects')
-    const rawDirName = projectDirIndex >= 0 ? parts[projectDirIndex + 1] : 'unknown'
-    // Extract last meaningful segment: "c--Users-cyril-Documents-SOOVERYN" → "SOOVERYN"
-    const segments = rawDirName.split('-').filter(Boolean)
-    const projectDirName = segments[segments.length - 1] || rawDirName
+    // Resolve projectPath/projectName via the session index (built from history.jsonl
+    // with real paths). Fallback: extract last segment from the encoded dir name —
+    // note: this fallback loses info for project names containing dashes (e.g. "redac-xsl").
+    const indexEntry = lookupSession(sessionId)
+    let projectPath: string
+    let projectName: string
+    if (indexEntry?.projectPath) {
+      projectPath = indexEntry.projectPath
+      projectName = indexEntry.projectName
+    } else {
+      const parts = info.filePath.split(/[\\/]/)
+      const projectDirIndex = parts.indexOf('projects')
+      const rawDirName = projectDirIndex >= 0 ? parts[projectDirIndex + 1] : 'unknown'
+      const segments = rawDirName.split('-').filter(Boolean)
+      const fallback = segments[segments.length - 1] || rawDirName
+      projectPath = fallback
+      projectName = fallback
+    }
 
     // contextSize = input_tokens of the last assistant message (= what Claude currently "sees")
     const contextSize = parsed.lastMessageInputTokens
@@ -57,8 +68,8 @@ export async function getActiveSessions(): Promise<ActiveSession[]> {
     results.push({
       sessionId,
       title: parsed.title,
-      projectPath: projectDirName,
-      projectName: projectDirName,
+      projectPath,
+      projectName,
       startedAt: parsed.startedAt,
       model: parsed.primaryModel,
       usedThinking: parsed.usedThinking,
