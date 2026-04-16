@@ -20,7 +20,7 @@ import type { UsageData } from '../renderer/lib/types'
 
 const app = express()
 const PORT = 3001
-const IS_PROD = process.env.NODE_ENV === 'production'
+const IS_PROD = process.env.NODE_ENV === 'production' || process.env.ELECTRON === '1'
 
 // Middleware for POST/DELETE routes
 app.use(express.json())
@@ -448,6 +448,7 @@ app.post('/api/session-index/rebuild', async (_req, res) => {
 
 if (IS_PROD) {
   const clientPath = join(__dirname, '../../dist/client')
+  console.log(`[server] serving client from: ${clientPath}`)
   app.use(express.static(clientPath))
   app.get('{*path}', (_req, res) => {
     res.sendFile(join(clientPath, 'index.html'))

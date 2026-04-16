@@ -13,6 +13,9 @@ files:
   - node_modules/**/*
   - package.json
 
+asarUnpack:
+  - dist/client/**/*
+
 extraResources:
   - from: electron/icon.png
     to: icon.png
