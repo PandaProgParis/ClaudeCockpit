@@ -37,6 +37,12 @@ interface SessionLine {
   message?: AssistantMessage & { content?: ({ type: string; text?: string })[] }
   timestamp?: string      // ISO string
   entrypoint?: string
+  cwd?: string
+}
+
+function basenameAny(p: string): string {
+  const parts = p.split(/[/\\]/).filter(Boolean)
+  return parts[parts.length - 1] ?? p
 }
 
 // --- Path resolution ---
@@ -132,6 +138,7 @@ interface ParsedSession {
   endedAt: string
   durationSeconds: number
   entrypoint: 'cli' | 'claude-vscode' | 'other'
+  cwd: string | null
 }
 
 export async function parseSessionFile(filePath: string): Promise<ParsedSession | null> {
@@ -150,6 +157,7 @@ export async function parseSessionFile(filePath: string): Promise<ParsedSession 
   let entrypoint: 'cli' | 'claude-vscode' | 'other' = 'cli'
   const timestamps: number[] = []
   let title = ''
+  let cwd: string | null = null
 
   for (const line of lines) {
     let entry: SessionLine
@@ -158,6 +166,9 @@ export async function parseSessionFile(filePath: string): Promise<ParsedSession 
     } catch {
       continue
     }
+
+    // Capture the first cwd we see — Claude CLI attaches it to most entries
+    if (!cwd && entry.cwd) cwd = entry.cwd
 
     // Extract title from ai-title entry
     if (!title && entry.type === 'ai-title' && (entry as any).aiTitle) {
@@ -231,7 +242,8 @@ export async function parseSessionFile(filePath: string): Promise<ParsedSession 
     startedAt: new Date(startMs).toISOString(),
     endedAt: new Date(endMs).toISOString(),
     durationSeconds,
-    entrypoint
+    entrypoint,
+    cwd,
   }
 }
 
@@ -343,8 +355,13 @@ export async function parseAllSessions(onProgress?: ProgressCallback): Promise<S
     if (!parsed || (parsed.tokens.total === 0 && parsed.durationSeconds === 0)) return null
 
     const indexEntry = lookupSession(task.sessionId)
-    const projectPath = indexEntry?.projectPath ?? task.dir
-    const projectName = indexEntry?.projectName ?? task.dir
+    // Priority: cwd from the JSONL itself (source of truth) > resolved index
+    // entry > encoded dir name. The session-index may contain stale mappings
+    // from a previous rebuild, so we trust the raw cwd first.
+    const projectPath = parsed.cwd ?? indexEntry?.projectPath ?? task.dir
+    const projectName = parsed.cwd
+      ? basenameAny(parsed.cwd)
+      : (indexEntry?.projectName ?? task.dir)
     return {
       sessionId: task.sessionId, title: parsed.title, projectPath, projectName,
       startedAt: parsed.startedAt, endedAt: parsed.endedAt, durationSeconds: parsed.durationSeconds,

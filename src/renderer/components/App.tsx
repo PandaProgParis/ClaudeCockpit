@@ -217,12 +217,12 @@ export function App() {
       <div
         className="min-h-0 flex-1"
         style={{
-          overflowY: tab === 'history' ? 'hidden' : 'auto',
-          padding: tab !== 'history' ? '20px 20px 40px' : 0,
+          overflowY: (tab === 'history' || tab === 'temporal') ? 'hidden' : 'auto',
+          padding: (tab !== 'history' && tab !== 'temporal') ? '20px 20px 40px' : 0,
           maxWidth: 1280,
           margin: '0 auto',
           width: '100%',
-          ...(tab !== 'history' ? {
+          ...((tab !== 'history' && tab !== 'temporal') ? {
             maskImage: 'linear-gradient(to bottom, black calc(100% - 48px), transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to bottom, black calc(100% - 48px), transparent 100%)',
           } : {}),
